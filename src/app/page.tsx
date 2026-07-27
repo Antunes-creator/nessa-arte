@@ -17,7 +17,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex justify-between items-center px-8 py-5">
 
           <img
-            src="/imagens/logo.png"
+            src="/imagens/logo2.jpg"
             alt="Nessa Arte"
             className="h-16 w-auto"
           />
@@ -519,7 +519,7 @@ export default function Home() {
 
 
         <img
-          src="/imagens/logo.png"
+          src="/imagens/logo2.jpg"
           alt="Nessa Arte"
           className="h-14 mx-auto mb-4"
         />
