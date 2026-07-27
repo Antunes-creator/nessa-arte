@@ -141,7 +141,7 @@ export default function Home() {
           <div>
 
             <img
-              src="/imagens/destaque.png"
+              src="/imagens/produto1.png"        
               alt="Nessa Arte"
               className="rounded-3xl shadow-2xl w-full max-w-xl mx-auto hover:scale-105 transition duration-500"
             />
