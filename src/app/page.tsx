@@ -577,5 +577,4 @@ export default function Home() {
   
   )
   
-}
-
+}  
