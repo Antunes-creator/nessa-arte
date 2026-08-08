@@ -1,10 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/app/lib/firebase";
 
 export default function Home() {
 
   const [imagemAberta, setImagemAberta] = useState<string | null>(null);
+
+  const [produtos, setProdutos] = useState<
+    {
+      id: string;
+      name: string;
+      description: string;
+      image: string;
+    }[]
+  >([]);
+
+  useEffect(() => {
+    async function carregarProdutos() {
+      try {
+        const snapshot = await getDocs(collection(db, "products"));
+
+        const produtosFirestore = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as {
+          id: string;
+          name: string;
+          description: string;
+          image: string;
+        }[];
+
+        setProdutos(produtosFirestore);
+      } catch (error) {
+        console.error("Erro ao carregar produtos:", error);
+      }
+    }
+
+    carregarProdutos();
+  }, []);
 
   const [menuAberto, setMenuAberto] = useState(false);
   return (
@@ -154,74 +189,53 @@ export default function Home() {
       </section>
 
       
-      {/* Produtos */}
+    {/* Produtos */}
 
-      <section
-        id="produtos"
-        className="max-w-7xl mx-auto px-8 py-20"
-      >
+<section
+  id="produtos"
+  className="max-w-7xl mx-auto px-8 py-20"
+>
+  <h3 className="text-4xl font-serif text-center mb-14">
+    Bonecas Personalizadas
+  </h3>
 
-        <h3 className="text-4xl font-serif text-center mb-14">
-          Bonecas Personalizadas
-        </h3>
+  <div className="bg-white rounded-3xl shadow-xl p-8">
 
+    <div className="grid md:grid-cols-3 gap-8">
 
-        <div className="bg-white rounded-3xl shadow-xl p-8">
+      {produtos.map((produto) => (
+        <div
+          key={produto.id}
+          className="overflow-hidden rounded-3xl"
+        >
+          <img
+            src={produto.image}
+            alt={produto.name}
+            onClick={() => setImagemAberta(produto.image)}
+            className="h-96 w-full object-cover hover:scale-110 transition duration-500 cursor-pointer"
+          />
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="p-4">
+            <h4 className="text-xl font-semibold text-center">
+              {produto.name}
+            </h4>
 
-
-            <div className="overflow-hidden rounded-3xl">
-
-              <img
-  src="/imagens/produto1.png"
-  alt="Boneca personalizada"
-  onClick={() => setImagemAberta("/imagens/produto1.png")}
-  className="h-96 w-full object-cover hover:scale-110 transition duration-500 cursor-pointer"
-/>
-
-            </div>
-
-
-
-            <div className="overflow-hidden rounded-3xl">
-
-              <img
-                src="/imagens/produto2.png"
-                alt="Boneca personalizada"
-                onClick={() => setImagemAberta("/imagens/produto2.png")}
-                className="h-96 w-full object-cover hover:scale-110 transition duration-500"
-              />
-
-            </div>
-
-
-
-            <div className="overflow-hidden rounded-3xl">
-
-              <img
-                src="/imagens/produto3.png"
-                alt="Boneca personalizada"
-                onClick={() => setImagemAberta("/imagens/produto3.png")}
-                className="h-96 w-full object-cover hover:scale-110 transition duration-500"
-              />
-
-            </div>
-
-
+            <p className="mt-2 text-center text-gray-600">
+              {produto.description}
+            </p>
           </div>
-
-
-          <p className="text-center text-gray-600 mt-10 text-lg">
-            Criações únicas feitas artesanalmente,
-            pensadas para deixar cada momento ainda mais especial.
-          </p>
-
-
         </div>
+      ))}
 
+    </div>
 
-      </section>
+    <p className="text-center text-gray-600 mt-10 text-lg">
+      Criações únicas feitas artesanalmente,
+      pensadas para deixar cada momento ainda mais especial.
+    </p>
+
+  </div>
+</section>
 
 
 
