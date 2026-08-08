@@ -87,12 +87,14 @@ export default function AdminPage() {
 
       alert("Imagem enviada com sucesso! 🎉");
     } catch (error) {
-      console.error(error);
-      alert("Erro ao enviar a imagem.");
-    } finally {
-      setEnviando(false);
-    }
-  }
+  console.error("ERRO COMPLETO DO IMAGEKIT:", error);
+
+  alert(
+    `Erro ao enviar a imagem: ${
+      error instanceof Error ? error.message : String(error)
+    }`
+  );
+}
 
   async function salvarProduto() {
     if (!nome.trim()) {
@@ -329,4 +331,5 @@ async function excluirProduto(id: string, nomeProduto: string) {
 </div>
     </main>
   );
-}
+  }}
+  
