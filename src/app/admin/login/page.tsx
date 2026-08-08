@@ -22,7 +22,7 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, senha);
 
       router.push("/admin");
-    } catch (error) {
+    } catch (_error) {
       setErro("E-mail ou senha incorretos.");
     } finally {
       setCarregando(false);

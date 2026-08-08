@@ -3,27 +3,25 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import {  addDoc,collection,getDocs,updateDoc,doc,deleteDoc, } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/app/lib/firebase";
 import { upload } from "@imagekit/react";
 
+type Produto = {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+};
+
 export default function AdminPage() {
   const router = useRouter();
-
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [imagemUrl, setImagemUrl] = useState("");
-  const [produtos, setProdutos] = useState<
-  {
-    id: string;
-    name: string;
-    description: string;
-    image: string;
-  }[]
->([]);
-
+  const [produtos, setProdutos] = useState<Produto[]>([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -38,24 +36,17 @@ export default function AdminPage() {
   }, [router]);
 
   async function carregarProdutos() {
-  try {
-    const snapshot = await getDocs(collection(db, "products"));
-
-    const lista = snapshot.docs.map((item) => ({
-      id: item.id,
-      ...item.data(),
-    })) as {
-      id: string;
-      name: string;
-      description: string;
-      image: string;
-    }[];
-
-    setProdutos(lista);
-  } catch (error) {
-    console.error("Erro ao carregar produtos:", error);
+    try {
+      const snapshot = await getDocs(collection(db, "products"));
+      const lista = snapshot.docs.map((item) => ({
+        id: item.id,
+        ...(item.data() as Omit<Produto, "id">),
+      })) as Produto[];
+      setProdutos(lista);
+    } catch (error) {
+      console.error("Erro ao carregar produtos:", error);
+    }
   }
-}
 
   async function enviarImagem() {
     if (!arquivo) {
@@ -67,13 +58,11 @@ export default function AdminPage() {
       setEnviando(true);
 
       const respostaAuth = await fetch("/api/upload-auth");
-
       if (!respostaAuth.ok) {
         throw new Error("Não foi possível autenticar o upload.");
       }
 
       const authData = await respostaAuth.json();
-
       const resposta = await upload({
         file: arquivo,
         fileName: arquivo.name,
@@ -84,17 +73,14 @@ export default function AdminPage() {
       });
 
       setImagemUrl(resposta.url || "");
-
       alert("Imagem enviada com sucesso! 🎉");
     } catch (error) {
-  console.error("ERRO COMPLETO DO IMAGEKIT:", error);
-
-  alert(
-    `Erro ao enviar a imagem: ${
-      error instanceof Error ? error.message : String(error)
-    }`
-  );
-}
+      console.error("ERRO COMPLETO DO IMAGEKIT:", error);
+      alert(`Erro ao enviar a imagem: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   async function salvarProduto() {
     if (!nome.trim()) {
@@ -114,7 +100,6 @@ export default function AdminPage() {
 
     try {
       setEnviando(true);
-
       await addDoc(collection(db, "products"), {
         name: nome,
         description: descricao,
@@ -123,11 +108,11 @@ export default function AdminPage() {
       });
 
       alert("Produto salvo com sucesso! 🎉");
-
       setNome("");
       setDescricao("");
       setArquivo(null);
       setImagemUrl("");
+      await carregarProdutos();
     } catch (error) {
       console.error(error);
       alert("Erro ao salvar o produto.");
@@ -136,79 +121,53 @@ export default function AdminPage() {
     }
   }
 
-  async function editarProduto(
-  id: string,
-  nomeAtual: string,
-  descricaoAtual: string
-) {
-  const novoNome = prompt("Digite o novo nome:", nomeAtual);
+  async function editarProduto(id: string, nomeAtual: string, descricaoAtual: string) {
+    const novoNome = prompt("Digite o novo nome:", nomeAtual);
+    if (novoNome === null) return;
 
-  if (novoNome === null) return;
+    const novaDescricao = prompt("Digite a nova descrição:", descricaoAtual);
+    if (novaDescricao === null) return;
 
-  const novaDescricao = prompt(
-    "Digite a nova descrição:",
-    descricaoAtual
-  );
-
-  if (novaDescricao === null) return;
-
-  try {
-    await updateDoc(doc(db, "products", id), {
-      name: novoNome,
-      description: novaDescricao,
-    });
-
-    alert("Produto atualizado com sucesso! 🎉");
-
-    carregarProdutos();
-  } catch (error) {
-    console.error(error);
-    alert("Erro ao editar o produto.");
+    try {
+      await updateDoc(doc(db, "products", id), {
+        name: novoNome,
+        description: novaDescricao,
+      });
+      alert("Produto atualizado com sucesso! 🎉");
+      await carregarProdutos();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao editar o produto.");
+    }
   }
-}
 
-async function excluirProduto(id: string, nomeProduto: string) {
-  const confirmar = window.confirm(
-    `Tem certeza que deseja excluir "${nomeProduto}"?`
-  );
+  async function excluirProduto(id: string, nomeProduto: string) {
+    const confirmar = window.confirm(`Tem certeza que deseja excluir "${nomeProduto}"?`);
+    if (!confirmar) return;
 
-  if (!confirmar) return;
-
-  try {
-    await deleteDoc(doc(db, "products", id));
-
-    alert("Produto excluído com sucesso! 🗑️");
-
-    carregarProdutos();
-  } catch (error) {
-    console.error(error);
-    alert("Erro ao excluir o produto.");
+    try {
+      await deleteDoc(doc(db, "products", id));
+      alert("Produto excluído com sucesso! 🗑️");
+      await carregarProdutos();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao excluir o produto.");
+    }
   }
-}
 
   return (
-    <main className="min-h-screen bg-[#faf7f5] p-8">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-[#fdf8f5] px-6 py-10">
+      <div className="mx-auto max-w-5xl">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-[#5c4a42]">
-            Painel Nessa Arte
-          </h1>
-
-          <p className="mt-2 text-[#806f66]">
-            Gerencie os produtos do seu site.
-          </p>
+          <h1 className="text-4xl font-bold text-[#5c4a42]">Painel Nessa Arte</h1>
+          <p className="mt-2 text-[#806f66]">Gerencie os produtos do seu site.</p>
         </div>
 
         <div className="max-w-xl rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-2xl font-semibold text-[#5c4a42]">
-            📸 Adicionar produto
-          </h2>
+          <h2 className="text-2xl font-semibold text-[#5c4a42]">📸 Adicionar produto</h2>
 
           <div className="mt-6">
-            <label className="font-semibold text-[#5c4a42]">
-              Nome do produto
-            </label>
-
+            <label className="font-semibold text-[#5c4a42]">Nome do produto</label>
             <input
               type="text"
               value={nome}
@@ -219,10 +178,7 @@ async function excluirProduto(id: string, nomeProduto: string) {
           </div>
 
           <div className="mt-5">
-            <label className="font-semibold text-[#5c4a42]">
-              Descrição
-            </label>
-
+            <label className="font-semibold text-[#5c4a42]">Descrição</label>
             <textarea
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
@@ -233,10 +189,7 @@ async function excluirProduto(id: string, nomeProduto: string) {
           </div>
 
           <div className="mt-5">
-            <label className="font-semibold text-[#5c4a42]">
-              Foto
-            </label>
-
+            <label className="font-semibold text-[#5c4a42]">Foto</label>
             <input
               type="file"
               accept="image/*"
@@ -258,15 +211,8 @@ async function excluirProduto(id: string, nomeProduto: string) {
 
           {imagemUrl && (
             <div className="mt-6">
-              <p className="mb-2 font-semibold text-[#5c4a42]">
-                Pré-visualização:
-              </p>
-
-              <img
-                src={imagemUrl}
-                alt="Imagem do produto"
-                className="max-h-80 rounded-xl object-contain"
-              />
+              <p className="mb-2 font-semibold text-[#5c4a42]">Pré-visualização:</p>
+              <img src={imagemUrl} alt="Imagem do produto" className="max-h-80 rounded-xl object-contain" />
             </div>
           )}
 
@@ -278,58 +224,38 @@ async function excluirProduto(id: string, nomeProduto: string) {
             💾 Salvar produto
           </button>
         </div>
+
+        <div className="mt-10 max-w-xl rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-semibold text-[#5c4a42]">📦 Produtos cadastrados</h2>
+
+          <div className="mt-6 space-y-6">
+            {produtos.map((produto) => (
+              <div key={produto.id} className="rounded-2xl border border-gray-200 p-5">
+                <img src={produto.image} alt={produto.name} className="h-48 w-full rounded-xl object-cover" />
+
+                <h3 className="mt-3 text-lg font-semibold text-[#5c4a42]">{produto.name}</h3>
+                <p className="mt-1 text-gray-600">{produto.description}</p>
+
+                <div className="mt-4">
+                  <button
+                    onClick={() => editarProduto(produto.id, produto.name, produto.description)}
+                    className="rounded-xl bg-[#5c4a42] px-5 py-2 font-semibold text-white"
+                  >
+                    ✏️ Editar
+                  </button>
+
+                  <button
+                    onClick={() => excluirProduto(produto.id, produto.name)}
+                    className="ml-2 rounded-xl bg-red-500 px-5 py-2 font-semibold text-white"
+                  >
+                    🗑️ Excluir
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-      <div className="mt-10 max-w-xl rounded-2xl bg-white p-6 shadow-sm">
-  <h2 className="text-2xl font-semibold text-[#5c4a42]">
-    📦 Produtos cadastrados
-  </h2>
-
-  <div className="mt-6 space-y-5">
-    {produtos.map((produto) => (
-      <div
-        key={produto.id}
-        className="rounded-xl border border-gray-200 p-4"
-      >
-        <img
-          src={produto.image}
-          alt={produto.name}
-          className="h-40 w-full rounded-xl object-cover"
-        />
-
-        <h3 className="mt-3 text-lg font-semibold text-[#5c4a42]">
-          {produto.name}
-        </h3>
-
-        <p className="mt-1 text-gray-600">
-          {produto.description}
-        </p>
-
-        <button
-  onClick={() =>
-    editarProduto(
-      produto.id,
-      produto.name,
-      produto.description
-    )
-  }
-  className="mt-4 rounded-xl bg-[#5c4a42] px-5 py-2 font-semibold text-white"
->
-  ✏️ Editar
-</button>
-<button
-  onClick={() =>
-    excluirProduto(produto.id, produto.name)
-  }
-  className="mt-4 ml-2 rounded-xl bg-red-500 px-5 py-2 font-semibold text-white"
->
-  🗑️ Excluir
-</button>
-
-      </div>
-    ))}
-  </div>
-</div>
     </main>
   );
-  }}
-  
+}
